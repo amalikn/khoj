@@ -105,3 +105,95 @@ Why Contribute?
 - Learn & Grow: Work on cutting-edge AI, LLMs, and semantic search technologies.
 
 You can help us build new features, improve the project documentation, report issues and fix bugs. If you're a developer, please see our [Contributing Guidelines](https://docs.khoj.dev/contributing/development) and check out [good first issues](https://github.com/khoj-ai/khoj/contribute) to work on.
+
+## Local Customization Tracking
+- Local machine-specific integration details are tracked outside repo in canonical external data roots.
+- External meta path: `/Volumes/Data/_ai/_tool/tools-data/<name>/meta`
+- Repo contains only sanitized capability/contract docs under `docs/local-capability/`.
+- Secret values are never stored in repo docs.
+
+## Local Operator Runbook (Codex/Claude)
+
+This section documents the local setup used to run Khoj natively with `khoj-mcp` autostart on macOS.
+
+### Local Paths
+- Repo: `/Volumes/Data/_ai/_tool/tools_stuff/khoj`
+- Persistent data root: `/Volumes/Data/_ai/_tool/tools-data/khoj`
+- Runtime artifacts: `/Volumes/Data/_ai/_tool/tools-runtime/khoj`
+- Native venv used by autostart: `/Volumes/Data/_ai/_tool/tools-working-cache/khoj/venv`
+
+### Required Local Env File
+Create/update: `/Volumes/Data/_ai/_tool/tools-data/khoj/config/.env`
+
+Minimum keys:
+- `KHOJ_BASE_URL=http://127.0.0.1:42110`
+- `KHOJ_ADMIN_EMAIL=<admin-email>`
+- `KHOJ_ADMIN_PASSWORD=<admin-password>`
+- `KHOJ_NATIVE_REPO_DIR=/Volumes/Data/_ai/_tool/tools_stuff/khoj`
+- `KHOJ_NATIVE_PYTHON_BIN=/Volumes/Data/_ai/_tool/tools-working-cache/khoj/venv/bin/python`
+- `KHOJ_NATIVE_WORK_DIR=/Volumes/Data/_ai/_tool/tools-runtime/khoj/workdir`
+- `KHOJ_NATIVE_ARTIFACTS_DIR=/Volumes/Data/_ai/_tool/tools-runtime/khoj`
+- `KHOJ_NATIVE_PGSERVER_DATA_DIR=/Volumes/Data/_ai/_tool/tools-data/khoj/pgserver_data`
+- `KHOJ_NATIVE_USE_EMBEDDED_DB=true`
+
+### Native Venv Prerequisites
+Install dependencies in the native venv used by autostart:
+
+```bash
+/Volumes/Data/_ai/_tool/tools-working-cache/khoj/venv/bin/python -m pip install "mcp>=1.23.0" "pgserver==0.1.4" "uvicorn==0.41.0"
+```
+
+### CSRF/Admin Login Notes
+- Login failures with `Forbidden (403)` and `CSRF verification failed` were caused by local cookie domain/secure mismatches during HTTP localhost usage.
+- Local cookie behavior is now hardened for local development in `src/khoj/app/settings.py`:
+  - local domain defaults now disable HTTPS cookie mode for `localhost`/`127.0.0.1`
+  - host-only cookie behavior is used when `KHOJ_DOMAIN` is unset
+- Admin URL: `http://127.0.0.1:42110/server/admin/login/` (also works with `localhost`)
+
+### Ready/Healthy Criteria
+- `GET /api/health` returns HTTP `200`
+- Admin login page opens without CSRF 403
+- Search and ingest operations succeed through `khoj-mcp`
+
+See detailed timeline and change log in `REVISION_HISTORY.md`.
+
+### Known Local Incident: Internal Server Error on `/chat`, `/home`, `/search` (2026-03-13)
+- Symptom:
+  - `http://127.0.0.1:42110/chat` returned internal server error
+  - `http://127.0.0.1:42110/home` returned internal server error
+  - `http://127.0.0.1:42110/search` returned internal server error
+- Root cause:
+  - missing built web assets under:
+    - `src/khoj/interface/built`
+    - `src/khoj/interface/compiled`
+    - `src/khoj/interface/home`
+- Recovery steps:
+  - rebuild web UI in `src/interface/web`
+  - sync generated `out/` artifacts into `src/khoj/interface/built/`
+  - create `src/khoj/interface/home/index.html` from built `index.html`
+  - restart Khoj service on `127.0.0.1:42110`
+
+### UI Asset Recovery Commands
+```bash
+cd /Volumes/Data/_ai/_tool/tools_stuff/khoj/src/interface/web
+npm install
+npm run build
+
+mkdir -p /Volumes/Data/_ai/_tool/tools_stuff/khoj/src/khoj/interface/built
+cp -R /Volumes/Data/_ai/_tool/tools_stuff/khoj/src/interface/web/out/. \
+  /Volumes/Data/_ai/_tool/tools_stuff/khoj/src/khoj/interface/built/
+
+mkdir -p /Volumes/Data/_ai/_tool/tools_stuff/khoj/src/khoj/interface/home
+cp /Volumes/Data/_ai/_tool/tools_stuff/khoj/src/interface/web/out/index.html \
+  /Volumes/Data/_ai/_tool/tools_stuff/khoj/src/khoj/interface/home/index.html
+```
+
+### Route/Template Verification
+- `GET /api/health` returns `200`
+- `index.html`, `chat/index.html`, `search/index.html`, `home/index.html` resolve from local templates
+- `/server/` returning `404 Not Found` is expected in this deployment shape; use app routes such as `/chat`, `/home`, `/search`, and `/server/admin/login/`
+
+## Local Enhancements Capture (2026-03-13)
+- Captured current local changes, configuration updates, and operational enhancements for GitHub publication.
+- Includes synchronization with sub-repo link updates where applicable.
+- Cross-reference local docs and capability notes added in this repository.

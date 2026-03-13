@@ -41,12 +41,17 @@ CSRF_TRUSTED_ORIGINS = [
     f"http://{KHOJ_DOMAIN}",
 ]
 
-DISABLE_HTTPS = is_env_var_true("KHOJ_NO_HTTPS")
+_khoj_domain_env = os.getenv("KHOJ_DOMAIN")
+# Default local runs to non-HTTPS cookie mode so admin login works on
+# http://127.0.0.1 and http://localhost without CSRF cookie rejection.
+_is_local_domain = (_khoj_domain_env or "").strip() in ("", "localhost", "127.0.0.1")
+DISABLE_HTTPS = is_env_var_true("KHOJ_NO_HTTPS") or _is_local_domain
 
 # WARNING: Change this check only if you know what you are doing.
-if not os.getenv("KHOJ_DOMAIN"):
-    SESSION_COOKIE_DOMAIN = "localhost"
-    CSRF_COOKIE_DOMAIN = "localhost"
+if not _khoj_domain_env:
+    # Host-only cookies avoid localhost vs 127.0.0.1 domain mismatch.
+    SESSION_COOKIE_DOMAIN = None
+    CSRF_COOKIE_DOMAIN = None
 else:
     # Production Settings
     SESSION_COOKIE_DOMAIN = KHOJ_DOMAIN
