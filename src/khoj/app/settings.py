@@ -196,6 +196,11 @@ DATABASES = {
 # User Settings
 AUTH_USER_MODEL = "database.KhojUser"
 
+# Admin auth redirects: avoid Django default /accounts/profile/ 404
+LOGIN_URL = "/server/admin/login/"
+LOGIN_REDIRECT_URL = "/server/admin/"
+LOGOUT_REDIRECT_URL = "/server/admin/login/"
+
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
 
